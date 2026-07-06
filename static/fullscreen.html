@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hermes Halo - 全屏状态</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #000;
+            height: 100vh;
+            width: 100vw;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: none;
+        }
+        
+        /* 顶部信息栏 - 鼠标移动时显示 */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 30px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+        
+        body.show-ui .top-bar {
+            opacity: 1;
+        }
+        
+        .instance-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .instance-icon { font-size: 32px; }
+        .instance-name { font-size: 18px; color: rgba(255,255,255,0.8); }
+        
+        .exit-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.6);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .exit-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+        
+        /* 光环容器 */
+        .halo-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        /* 状态信息 - 底部 */
+        .state-info {
+            position: fixed;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        body.show-ui .state-info {
+            opacity: 1;
+        }
+        
+        .state-label {
+            font-size: 56px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            transition: color 0.3s;
+            text-shadow: 0 0 60px currentColor;
+        }
+        
+        .state-description {
+            font-size: 24px;
+            color: rgba(255,255,255,0.5);
+        }
+        
+        /* 时间 */
+        .time-display {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        body.show-ui .time-display { opacity: 1; }
+        
+        /* 连接状态 */
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        body.show-ui .connection-status { opacity: 1; }
+        
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .connection-dot.connected { background: #33cc55; }
+        .connection-dot.disconnected { background: #ff4444; }
+    </style>
+</head>
+<body class="show-ui">
+    <div class="top-bar">
+        <div class="instance-info">
+            <span class="instance-icon" id="instanceIcon">🤖</span>
+            <span class="instance-name" id="instanceName">-</span>
+        </div>
+        <button class="exit-btn" id="exitBtn">✕ 退出全屏</button>
+    </div>
+    
+    <div class="halo-container">
+        <canvas id="halo"></canvas>
+    </div>
+    
+    <div class="state-info">
+        <div class="state-label" id="stateLabel">空闲</div>
+        <div class="state-description" id="stateDescription">-</div>
+    </div>
+    
+    <div class="connection-status">
+        <span class="connection-dot disconnected" id="connectionDot"></span>
+        <span id="connectionText">未连接</span>
+    </div>
+    
+    <div class="time-display" id="timeDisplay"></div>
+    
+    <script>
+    (function(){
+        "use strict";
+        
+        var urlParams = new URLSearchParams(window.location.search);
+        var instanceId = urlParams.get('id') || 'default';
+        var detailPage = 'detail.html?id=' + instanceId;
+        
+        // ═══════════════════════════════════════════════════════════════
+        // 浏览器全屏 API
+        // ═══════════════════════════════════════════════════════════════
+        
+        function isFullscreen() {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+        }
+        
+        function enterFullscreen() {
+            var el = document.documentElement;
+            var fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen;
+            if (fn) {
+                fn.call(el).catch(function(err) {
+                    console.log('全屏请求被拒绝:', err);
+                });
+            }
+        }
+        
+        function doExit() {
+            if (isFullscreen()) {
+                var fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen;
+                if (fn) fn.call(document);
+            } else {
+                // 已经不在全屏了，直接跳转
+                window.location.href = detailPage;
+            }
+        }
+        
+        // 退出按钮
+        document.getElementById('exitBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            doExit();
+        });
+        
+        // 监听全屏状态变化（ESC退出 或 退出按钮都会触发）
+        document.addEventListener('fullscreenchange', onFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+        document.addEventListener('mozfullscreenchange', onFullscreenChange);
+        
+        var fsChanged = false;
+        function onFullscreenChange() {
+            if (!isFullscreen()) {
+                // 用户通过ESC或按钮退出了全屏 → 返回详情页
+                if (!fsChanged) {
+                    fsChanged = true;
+                    window.location.href = detailPage;
+                }
+            }
+        }
+        
+        // 页面加载时如果不在全屏（直接访问URL），尝试进入全屏
+        if (!isFullscreen()) {
+            setTimeout(enterFullscreen, 100);
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // 鼠标移动显示/隐藏UI
+        // ═══════════════════════════════════════════════════════════════
+        
+        var hideTimer = null;
+        
+        function showUI() {
+            document.body.classList.add('show-ui');
+            document.body.style.cursor = 'default';
+            clearTimeout(hideTimer);
+            hideTimer = setTimeout(hideUI, 3000);
+        }
+        
+        function hideUI() {
+            document.body.classList.remove('show-ui');
+        }
+        
+        document.addEventListener('mousemove', showUI);
+        document.addEventListener('touchstart', showUI);
+        
+        // 初始显示3秒后隐藏
+        hideTimer = setTimeout(hideUI, 3000);
+        
+        // ═══════════════════════════════════════════════════════════════
+        // 状态配置
+        // ═══════════════════════════════════════════════════════════════
+        
+        var CONFIGS = {
+            idle:         {color:"#aaaaaa",halo:"#cccccc",period:6.0,dashes:[60,30],               ms:0,  md:0,   amin:0.30,amax:0.42,br:0,  rp:0,   rpperiod:0,   label:"空闲",    desc:"正在等待任务"},
+            thinking:     {color:"#ff8830",halo:"#ffdbb8",period:2.4,dashes:[70,35,45,30,25,20],   ms:0.6,md:0.4, amin:0.45,amax:0.90,br:5.2,rp:0,   rpperiod:0,   label:"思考中",  desc:"正在推理分析"},
+            streaming:    {color:"#e8b100",halo:"#fff0aa",period:2.0,dashes:[60,25,45,20,35,15],   ms:0.7,md:0.30,amin:0.50,amax:0.85,br:3.5,rp:0,   rpperiod:0,   label:"输出中",  desc:"正在生成回复"},
+            executing:    {color:"#3399ff",halo:"#bbddff",period:1.3,dashes:[50,25,20,20,35,25,25,22],ms:1.2,md:0.28,amin:0.60,amax:0.90,br:0,  rp:0,   rpperiod:0,   label:"执行中",  desc:"正在调用工具"},
+            input_needed: {color:"#ee3333",halo:"#ffcccc",period:2.8,dashes:[80,50,30,25],          ms:1.8,md:0.5, amin:0.52,amax:0.94,br:2.0,rp:0,   rpperiod:0,   label:"等待输入",desc:"需要用户确认"},
+            completed:    {color:"#33cc55",halo:"#bbffcc",period:5.0,dashes:[70,35,45,30,25,20],   ms:0.5,md:0.3, amin:0.38,amax:0.84,br:6.0,rp:0,   rpperiod:0,   label:"已完成",  desc:"任务已完成"},
+            error:        {color:"#ff4444",halo:"#ffcccc",period:1.5,dashes:[40,20,30,15],          ms:2.0,md:0.6, amin:0.50,amax:0.95,br:1.5,rp:0,   rpperiod:0,   label:"错误",    desc:"出现错误"},
+            compacting:   {color:"#9944ff",halo:"#ddccff",period:2.1,dashes:[35,20,35,20,35,20],   ms:0.4,md:0.25,amin:0.38,amax:0.80,br:4.0,rp:0.12,rpperiod:1.6, label:"压缩中",  desc:"正在整理上下文"}
+        };
+        
+        // ═══════════════════════════════════════════════════════════════
+        // Canvas 圆环绘制器
+        // ═══════════════════════════════════════════════════════════════
+        
+        function HaloRenderer(canvas, size) {
+            this.canvas = canvas;
+            this.ctx = canvas.getContext("2d");
+            this.size = size;
+            this.time = 0;
+            this.lastT = null;
+            this.targetState = "idle";
+            this.currentState = "idle";
+            this.currentCfg = CONFIGS.idle;
+            this.morphFrom = null;
+            this.morphStart = 0;
+            this.morphActive = false;
+            this.lifecycle = "entering";
+            this.entryStart = null;
+            this.pulseSettleStart = 0;
+            this.MORPH_DURATION = 600;
+            this.ENTRY_DURATION = 800;
+            this.rafId = null;
+            
+            var dpr = window.devicePixelRatio || 1;
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            
+            this._frame = this._frame.bind(this);
+            this.rafId = requestAnimationFrame(this._frame);
+        }
+        
+        HaloRenderer.prototype.setState = function(state) {
+            if (!CONFIGS[state] || this.targetState === state) return;
+            this.targetState = state;
+        };
+        
+        HaloRenderer.prototype._hexRgb = function(hex) {
+            return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+        };
+        
+        HaloRenderer.prototype._rgba = function(r,g,b,a) {
+            return "rgba("+Math.round(r)+","+Math.round(g)+","+Math.round(b)+","+a.toFixed(3)+")";
+        };
+        
+        HaloRenderer.prototype._lerp = function(a,b,t) { return a+(b-a)*t; };
+        
+        HaloRenderer.prototype._lerpRgb = function(a,b,t) {
+            return [this._lerp(a[0],b[0],t), this._lerp(a[1],b[1],t), this._lerp(a[2],b[2],t)];
+        };
+        
+        HaloRenderer.prototype._morphDashArrays = function(a,b,t) {
+            var nA=a.length/2, nB=b.length/2;
+            var nFloat=this._lerp(nA,nB,t), nDraw=Math.max(1,Math.ceil(nFloat));
+            var result=[];
+            var totalA=a.reduce(function(s,v){return s+v},0);
+            var totalB=b.reduce(function(s,v){return s+v},0);
+            var totalTarget=this._lerp(totalA,totalB,t);
+            
+            for(var i=0;i<nDraw;i++){
+                var frac=i/nDraw;
+                var ia=Math.floor(frac*nA)%nA, ib=Math.floor(frac*nB)%nB;
+                var dl=this._lerp(a[ia*2],b[ib*2],t), gl=this._lerp(a[ia*2+1],b[ib*2+1],t);
+                var bs=nDraw<=nFloat?1:1-(nDraw-nFloat);
+                bs=Math.max(0.02,bs);
+                result.push(dl*bs,gl*bs);
+            }
+            
+            var cur=result.reduce(function(s,v){return s+v},0);
+            if(cur>0){var sc=totalTarget/cur;for(var j=0;j<result.length;j++)result[j]*=sc;}
+            return result;
+        };
+        
+        HaloRenderer.prototype._morphConfig = function(a,b,t) {
+            var self = this;
+            return {
+                color: self._lerpRgb(self._hexRgb(a.color), self._hexRgb(b.color), t),
+                halo: self._lerpRgb(self._hexRgb(a.halo), self._hexRgb(b.halo), t),
+                period: self._lerp(a.period,b.period,t),
+                ms: self._lerp(a.ms,b.ms,t),
+                md: self._lerp(a.md,b.md,t),
+                amin: self._lerp(a.amin,b.amin,t),
+                amax: self._lerp(a.amax,b.amax,t),
+                br: self._lerp(a.br,b.br,t),
+                rp: self._lerp(a.rp,b.rp,t),
+                rpperiod: self._lerp(a.rpperiod,b.rpperiod,t),
+                dashes: self._morphDashArrays(a.dashes,b.dashes,t)
+            };
+        };
+        
+        HaloRenderer.prototype._drawRing = function(cx,cy,R,cfg,alphaMul,timeOff) {
+            if(alphaMul<=0.001) return;
+            
+            var ctx = this.ctx;
+            var t = this.time + (timeOff||0);
+            var mainRgb = Array.isArray(cfg.color)?cfg.color:this._hexRgb(cfg.color);
+            var haloRgb = Array.isArray(cfg.halo)?cfg.halo:this._hexRgb(cfg.halo);
+            
+            var breathe=0;
+            if(cfg.br>0){var ph=(t%cfg.br)/cfg.br;breathe=Math.max(0,Math.sin(ph*Math.PI*2));}
+            var alpha=(cfg.br>0?cfg.amin+(cfg.amax-cfg.amin)*breathe:cfg.amax)*alphaMul;
+            
+            var offset=((t/cfg.period)*Math.PI*2)%(Math.PI*2);
+            var rawSum=cfg.dashes.reduce(function(a,b){return a+b;},0);
+            
+            var haloLw=Math.max(R*0.28,2);
+            var haloAngExt=haloLw/R, minGap=haloAngExt*1.20;
+            
+            var rawAngles=[];
+            for(var i=0;i<cfg.dashes.length;i++){
+                var morph=Math.sin(t*cfg.ms+i*2.1);
+                var ang=(cfg.dashes[i]/rawSum)*Math.PI*2;
+                if(i%2===0){ang*=1+cfg.md*morph;ang=Math.max(0.02,ang);}
+                else{ang*=1-cfg.md*0.5*morph;ang=Math.max(minGap,ang);}
+                rawAngles.push(ang);
+            }
+            
+            var dashTotal=0,gapTotal=0;
+            for(var j=0;j<rawAngles.length;j++){if(j%2===0)dashTotal+=rawAngles[j];else gapTotal+=rawAngles[j];}
+            var dashTarget=Math.PI*2-gapTotal, dashScale=dashTotal>0.001?dashTarget/dashTotal:1;
+            
+            var cumul=0;
+            for(var k=0;k<rawAngles.length;k++){
+                var ang=k%2===0?rawAngles[k]*dashScale:rawAngles[k];
+                var a0=cumul-offset, a1=a0+ang;
+                cumul+=ang;
+                if(k%2===1) continue;
+                
+                ctx.strokeStyle=this._rgba(haloRgb[0],haloRgb[1],haloRgb[2],alpha*0.4);
+                ctx.lineWidth=haloLw*1.5;ctx.lineCap="round";
+                ctx.beginPath();ctx.arc(cx,cy,R,a0,a1,false);ctx.stroke();
+                
+                ctx.strokeStyle=this._rgba(haloRgb[0],haloRgb[1],haloRgb[2],alpha*0.55);
+                ctx.lineWidth=haloLw;ctx.lineCap="round";
+                ctx.beginPath();ctx.arc(cx,cy,R,a0,a1,false);ctx.stroke();
+                
+                var mid=this._lerpRgb(haloRgb,mainRgb,0.5);
+                ctx.strokeStyle=this._rgba(mid[0],mid[1],mid[2],alpha*0.85);
+                ctx.lineWidth=Math.max(R*0.16,2);ctx.lineCap="round";
+                ctx.beginPath();ctx.arc(cx,cy,R,a0,a1,false);ctx.stroke();
+                
+                ctx.strokeStyle=this._rgba(mainRgb[0],mainRgb[1],mainRgb[2],alpha);
+                ctx.lineWidth=Math.max(R*0.10,1.5);ctx.lineCap="round";
+                ctx.beginPath();ctx.arc(cx,cy,R,a0,a1,false);ctx.stroke();
+            }
+        };
+        
+        HaloRenderer.prototype._drawGlowBridge = function(cx,cy,R,a,b,t) {
+            var ga=Math.sin(t*Math.PI)*0.32;
+            if(ga<0.005) return;
+            var midRgb=this._lerpRgb(this._hexRgb(a.color),this._hexRgb(b.color),t);
+            var ctx = this.ctx;
+            
+            ctx.strokeStyle=this._rgba(midRgb[0],midRgb[1],midRgb[2],ga*0.15);
+            ctx.lineWidth=Math.max(R*0.60,4);ctx.lineCap="round";
+            ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2,false);ctx.stroke();
+            
+            ctx.strokeStyle=this._rgba(midRgb[0],midRgb[1],midRgb[2],ga*0.30);
+            ctx.lineWidth=Math.max(R*0.30,2.5);ctx.lineCap="round";
+            ctx.beginPath();ctx.arc(cx,cy,R,0,Math.PI*2,false);ctx.stroke();
+        };
+        
+        HaloRenderer.prototype._radiusPulseFactor = function(cfg,tNow) {
+            if(!cfg.rp||cfg.rpperiod<=0) return 1;
+            if(this.pulseSettleStart<=0) return 1;
+            var elapsed=tNow-this.pulseSettleStart;
+            if(elapsed<0) return 1;
+            var PULSE_SETTLE_DELAY=0.20, PULSE_RAMP_DURATION=0.50;
+            var ramp=Math.min(1,Math.max(0,elapsed-PULSE_SETTLE_DELAY)/PULSE_RAMP_DURATION);
+            var erp=cfg.rp*(1-Math.pow(1-ramp,3));
+            if(erp<=0.001) return 1;
+            return 1+erp*Math.sin((tNow%cfg.rpperiod)/cfg.rpperiod*Math.PI*2);
+        };
+        
+        HaloRenderer.prototype._frame = function(ts) {
+            this.rafId=null;
+            if(!this.lastT) this.lastT=ts;
+            var dt=(ts-this.lastT)/1000;
+            if(dt<=0) dt=0.016; else if(dt>0.1) dt=0.1;
+            this.lastT=ts; this.time+=dt;
+            
+            var size=this.size;
+            var cx=size/2, cy=size/2;
+            var baseR=size*0.35;
+            
+            var entryScale=1, entryAlpha=1;
+            if(this.lifecycle==="entering"){
+                if(!this.entryStart) this.entryStart=ts;
+                var raw=Math.min((ts-this.entryStart)/this.ENTRY_DURATION,1);
+                var c1=1.70158;
+                var eb=1+(c1+1)*Math.pow(raw-1,3)+c1*Math.pow(raw-1,2);
+                entryScale=0.2+0.8*eb;
+                entryAlpha=1-Math.pow(1-raw,3);
+                if(raw>=1) this.lifecycle="active";
+            }
+            
+            var ringScale=entryScale, ringAlpha=entryAlpha;
+            
+            var activeCfg=this.morphActive
+                ?this._morphConfig(this.morphFrom,CONFIGS[this.targetState],Math.min((ts-this.morphStart)/this.MORPH_DURATION,1))
+                :this.currentCfg;
+            var rpF=this._radiusPulseFactor(activeCfg,this.time);
+            var RR=baseR*ringScale*rpF;
+            
+            this.ctx.clearRect(0,0,size,size);
+            
+            if(this.lifecycle==="active"&&this.targetState!==this.currentState&&!this.morphActive){
+                this.pulseSettleStart=0;
+                this.morphFrom=this.currentCfg;this.morphStart=ts;this.morphActive=true;
+            }
+            
+            if(this.lifecycle!=="active"){
+                this._drawRing(cx,cy,RR,this.currentCfg,ringAlpha,0);
+            }else if(this.morphActive){
+                var elapsed=ts-this.morphStart, rawM=Math.min(elapsed/this.MORPH_DURATION,1);
+                var tE=rawM<0.5?2*rawM*rawM:1-Math.pow(-2*rawM+2,2)/2;
+                var interp=this._morphConfig(this.morphFrom,CONFIGS[this.targetState],tE);
+                this._drawRing(cx,cy,RR,interp,ringAlpha,0);
+                this._drawGlowBridge(cx,cy,RR,this.morphFrom,CONFIGS[this.targetState],tE);
+                if(rawM>=1){
+                    this.morphActive=false;this.currentState=this.targetState;
+                    this.currentCfg=CONFIGS[this.targetState];this.morphFrom=null;
+                    if(CONFIGS[this.targetState].rp>0) this.pulseSettleStart=this.time+0.06;
+                }
+            }else{
+                this._drawRing(cx,cy,RR,this.currentCfg,ringAlpha,0);
+            }
+            
+            if(this.lifecycle!=="closed"){this.rafId=requestAnimationFrame(this._frame);}
+        };
+        
+        // ═══════════════════════════════════════════════════════════════
+        // 初始化
+        // ═══════════════════════════════════════════════════════════════
+        
+        var stateLabelEl = document.getElementById("stateLabel");
+        var stateDescEl = document.getElementById("stateDescription");
+        var instanceIcon = document.getElementById("instanceIcon");
+        var instanceName = document.getElementById("instanceName");
+        var connectionDot = document.getElementById("connectionDot");
+        var connectionText = document.getElementById("connectionText");
+        var timeDisplay = document.getElementById("timeDisplay");
+        
+        // Canvas 尺寸 - 适配全屏
+        function calcCanvasSize() {
+            return Math.min(
+                window.innerWidth * 0.80,
+                window.innerHeight * 0.60,
+                800
+            );
+        }
+        
+        var canvasSize = calcCanvasSize();
+        var canvas = document.getElementById("halo");
+        canvas.style.width = canvasSize + "px";
+        canvas.style.height = canvasSize + "px";
+        var renderer = new HaloRenderer(canvas, canvasSize);
+        
+        function updateTime() {
+            var now = new Date();
+            timeDisplay.textContent = now.toLocaleTimeString("zh-CN", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+        
+        function setState(name) {
+            if(!CONFIGS[name]) return;
+            renderer.setState(name);
+            stateLabelEl.textContent = CONFIGS[name].label;
+            stateLabelEl.style.color = CONFIGS[name].color;
+            stateDescEl.textContent = CONFIGS[name].desc;
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
+        // WebSocket
+        // ═══════════════════════════════════════════════════════════════
+        
+        var ws = null, reconnectAttempts = 0;
+        
+        function connect() {
+            var protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            var host = window.location.hostname || "localhost";
+            ws = new WebSocket(protocol + "//" + host + (window.location.port ? ":" + window.location.port : "") + "/ws");
+            
+            ws.onopen = function() {
+                connectionDot.className = "connection-dot connected";
+                connectionText.textContent = "已连接";
+                reconnectAttempts = 0;
+                ws.send(JSON.stringify({type:"get_state", instance_id: instanceId}));
+            };
+            
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                var instance = null;
+                
+                if (data.type === "state_update" && data.data.id === instanceId) {
+                    instance = data.data;
+                } else if (data.type === "states_update") {
+                    instance = data.data.find(function(i) { return i.id === instanceId; });
+                }
+                
+                if (instance) {
+                    setState(instance.state);
+                    instanceIcon.textContent = instance.icon;
+                    instanceName.textContent = instance.name;
+                    document.title = instance.name + " - " + CONFIGS[instance.state].label;
+                }
+            };
+            
+            ws.onclose = function() {
+                connectionDot.className = "connection-dot disconnected";
+                connectionText.textContent = "连接断开";
+                if (reconnectAttempts < 10) {
+                    reconnectAttempts++;
+                    setTimeout(connect, Math.min(1000 * Math.pow(2, reconnectAttempts), 30000));
+                }
+            };
+        }
+        
+        connect();
+        
+        window.addEventListener('resize', function() {
+            canvasSize = calcCanvasSize();
+            canvas.style.width = canvasSize + "px";
+            canvas.style.height = canvasSize + "px";
+            var dpr = window.devicePixelRatio || 1;
+            canvas.width = canvasSize * dpr;
+            canvas.height = canvasSize * dpr;
+            renderer.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            renderer.size = canvasSize;
+        });
+    })();
+    </script>
+</body>
+</html>
