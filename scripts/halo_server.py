@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 """Hermes Halo 服务器 - 支持多实例，同端口 HTTP + WebSocket"""
+"""
+Hermes Halo — 实时显示多个 Hermes Agent 运行状态的光环指示器仪表盘。
+支持自动发现 Hermes Profile，基于日志 + state.db 双源实时状态检测。
+
+仓库: https://github.com/NousResearch/hermes-halo
+"""
 
 import asyncio
 import json
@@ -18,7 +24,7 @@ except ImportError:
 
 # 添加当前目录到路径
 sys.path.insert(0, str(Path(__file__).parent))
-from hermes_state import HermesMultiDetector
+from hermes_state import HermesMultiDetector, DEFAULT_CONFIG_PATH
 
 # 静态文件目录
 STATIC_DIR = Path(__file__).parent.parent / 'static'
@@ -30,24 +36,48 @@ logging.basicConfig(
 )
 logger = logging.getLogger('HermesHalo')
 
+
 class HaloServer:
     """Hermes Halo 服务器（HTTP + WebSocket 同端口）"""
 
     def __init__(self, host: str = '0.0.0.0', port: int = 8765, config_path: str = None):
         self.host = host
         self.port = port
-        self.detector = HermesMultiDetector(config_path or '~/.hermes/hermes-halo/config.json')
+        self.config_path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
+        self.detector = HermesMultiDetector(self.config_path)
         self.clients: Set[web.WebSocketResponse] = set()
         self.running = False
         self._last_states: Dict[str, str] = {}
+        self._runner = None
+        self._monitor_task = None
         self._app = web.Application()
         self._setup_routes()
 
     def _setup_routes(self):
         """设置路由"""
         self._app.router.add_get('/ws', self.ws_handler)
+        self._app.router.add_get('/api/health', self.health_handler)
+        self._app.router.add_get('/api/states', self.states_handler)
         self._app.router.add_get('/', self.serve_index)
         self._app.router.add_get('/{path:.*}', self.serve_static)
+
+    async def health_handler(self, request):
+        """健康检查"""
+        return web.json_response({
+            'ok': True,
+            'service': 'hermes-halo',
+            'port': self.port,
+            'config_path': str(self.detector.config_path),
+            'instances': self.detector.get_instance_ids(),
+            'clients': len(self.clients),
+        })
+
+    async def states_handler(self, request):
+        """HTTP 方式获取当前实例状态"""
+        return web.json_response({
+            'type': 'states_update',
+            'data': self.detector.get_all_states(),
+        })
 
     async def serve_index(self, request):
         """首页"""
@@ -141,7 +171,7 @@ class HaloServer:
             return
 
         disconnected = set()
-        for client in self.clients:
+        for client in list(self.clients):
             try:
                 await client.send_json(message)
             except Exception:
@@ -178,15 +208,16 @@ class HaloServer:
         """启动服务器"""
         self.running = True
         logger.info(f"🚀 Hermes Halo 服务器已启动: http://{self.host}:{self.port}")
+        logger.info(f"📄 配置文件: {self.detector.config_path}")
         logger.info(f"📋 监控实例: {', '.join(self.detector.get_instance_ids())}")
 
-        runner = web.AppRunner(self._app)
-        await runner.setup()
-        site = web.TCPSite(runner, self.host, self.port)
+        self._runner = web.AppRunner(self._app)
+        await self._runner.setup()
+        site = web.TCPSite(self._runner, self.host, self.port)
         await site.start()
 
         # 启动状态监控
-        monitor_task = asyncio.create_task(self.state_monitor())
+        self._monitor_task = asyncio.create_task(self.state_monitor())
 
         # 保持运行
         try:
@@ -195,14 +226,24 @@ class HaloServer:
         except asyncio.CancelledError:
             pass
         finally:
-            monitor_task.cancel()
-            await runner.cleanup()
+            if self._monitor_task:
+                self._monitor_task.cancel()
+                try:
+                    await self._monitor_task
+                except asyncio.CancelledError:
+                    pass
+            if self._runner:
+                await self._runner.cleanup()
 
     async def stop(self):
         """停止服务器"""
         self.running = False
-        for client in self.clients.copy():
-            await client.close()
+        for client in list(self.clients):
+            try:
+                await client.close()
+            except Exception:
+                pass
+        self.clients.clear()
         logger.info("Hermes Halo 服务器已停止")
 
 
@@ -213,7 +254,7 @@ def main():
     parser = argparse.ArgumentParser(description='Hermes Halo 服务器')
     parser.add_argument('--host', default='0.0.0.0', help='监听地址 (默认: 0.0.0.0)')
     parser.add_argument('--port', type=int, default=8765, help='监听端口 (默认: 8765)')
-    parser.add_argument('--config', help='配置文件路径')
+    parser.add_argument('--config', default=str(DEFAULT_CONFIG_PATH), help='配置文件路径')
     args = parser.parse_args()
 
     server = HaloServer(host=args.host, port=args.port, config_path=args.config)

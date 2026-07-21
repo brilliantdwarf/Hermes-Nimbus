@@ -467,66 +467,130 @@
         var statusText = document.getElementById('statusText');
         var renderers = {}; // 存储每个节点的渲染器
         
+        function safeText(value, maxLen) {
+            if (value == null) return '';
+            var s = String(value).replace(/[\u0000-\u001f\u007f]/g, '');
+            if (maxLen && s.length > maxLen) s = s.slice(0, maxLen);
+            return s;
+        }
+        
+        function safeInstanceId(value) {
+            var s = String(value || '');
+            return /^[a-zA-Z0-9_-]{1,64}$/.test(s) ? s : '';
+        }
+        
+        function safeState(value) {
+            var s = String(value || '');
+            return CONFIGS[s] ? s : 'idle';
+        }
+        
+        function safeColor(value, fallback) {
+            var s = String(value || '');
+            return /^#[0-9a-fA-F]{6}$/.test(s) ? s : (fallback || '#aaaaaa');
+        }
+        
+        function safeIcon(value) {
+            var allowed = {'🤖': true, '👨‍💼': true, '👨💼': true, '🔬': true, '👤': true, '👔': true};
+            var s = String(value || '');
+            return allowed[s] ? s : '●';
+        }
+        
+        function appendTextEl(parent, tag, className, text, maxLen) {
+            var el = document.createElement(tag);
+            if (className) el.className = className;
+            el.textContent = safeText(text, maxLen);
+            parent.appendChild(el);
+            return el;
+        }
+        
+        function updateStateLabel(labelEl, stateConfig) {
+            var color = safeColor(stateConfig.color, '#aaaaaa');
+            labelEl.textContent = '';
+            labelEl.style.color = color;
+            var dot = document.createElement('span');
+            dot.className = 'state-dot';
+            dot.style.background = color;
+            labelEl.appendChild(dot);
+            labelEl.appendChild(document.createTextNode(safeText(stateConfig.label, 20)));
+        }
+        
         function createInstanceCard(instance) {
-            var stateConfig = CONFIGS[instance.state] || CONFIGS.idle;
-            var instanceColor = instance.color || stateConfig.color;
+            var safeId = safeInstanceId(instance && instance.id);
+            if (!safeId) return null;
+            var state = safeState(instance.state);
+            var stateConfig = CONFIGS[state] || CONFIGS.idle;
+            var instanceColor = safeColor(instance.color, stateConfig.color);
             
             var card = document.createElement('div');
             card.className = 'instance-card';
             card.style.setProperty('--instance-color', instanceColor);
-            card.setAttribute('data-instance-id', instance.id);
-            card.onclick = function() { window.location.href = 'detail.html?id=' + instance.id; };
+            card.setAttribute('data-instance-id', safeId);
+            card.onclick = function() { window.location.href = 'detail.html?id=' + encodeURIComponent(safeId); };
             
-            card.innerHTML = 
-                '<div class="instance-header">' +
-                    '<div class="instance-icon">' + instance.icon + '</div>' +
-                    '<div class="instance-info">' +
-                        '<div class="instance-name">' + instance.name + '</div>' +
-                        '<div class="instance-desc">' + instance.description + '</div>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="halo-container">' +
-                    '<canvas id="canvas-' + instance.id + '"></canvas>' +
-                '</div>' +
-                '<div class="state-info">' +
-                    '<div class="state-label" style="color:' + stateConfig.color + '">' +
-                        '<span class="state-dot" style="background:' + stateConfig.color + '"></span>' +
-                        stateConfig.label +
-                    '</div>' +
-                    '<div class="state-desc">' + (instance.state_config ? instance.state_config.description : '') + '</div>' +
-                '</div>';
+            var header = document.createElement('div');
+            header.className = 'instance-header';
+            card.appendChild(header);
+            
+            appendTextEl(header, 'div', 'instance-icon', safeIcon(instance.icon));
+            
+            var info = document.createElement('div');
+            info.className = 'instance-info';
+            header.appendChild(info);
+            appendTextEl(info, 'div', 'instance-name', instance.name, 40);
+            appendTextEl(info, 'div', 'instance-desc', instance.description, 80);
+            
+            var haloContainer = document.createElement('div');
+            haloContainer.className = 'halo-container';
+            card.appendChild(haloContainer);
+            
+            var canvas = document.createElement('canvas');
+            canvas.id = 'canvas-' + safeId;
+            haloContainer.appendChild(canvas);
+            
+            var stateInfo = document.createElement('div');
+            stateInfo.className = 'state-info';
+            card.appendChild(stateInfo);
+            
+            var labelEl = document.createElement('div');
+            labelEl.className = 'state-label';
+            stateInfo.appendChild(labelEl);
+            updateStateLabel(labelEl, stateConfig);
+            appendTextEl(stateInfo, 'div', 'state-desc', instance.state_config ? instance.state_config.description : '', 80);
             
             return card;
         }
         
         function updateInstances(instances) {
+            if (!Array.isArray(instances)) return;
             instances.forEach(function(instance) {
-                var existingCard = document.querySelector('[data-instance-id="' + instance.id + '"]');
+                var safeId = safeInstanceId(instance && instance.id);
+                if (!safeId) return;
+                var state = safeState(instance.state);
+                var existingCard = document.querySelector('[data-instance-id="' + safeId + '"]');
                 
                 if (existingCard) {
                     // 更新现有卡片的状态
-                    var stateConfig = CONFIGS[instance.state] || CONFIGS.idle;
+                    var stateConfig = CONFIGS[state] || CONFIGS.idle;
                     var labelEl = existingCard.querySelector('.state-label');
-                    var dotEl = existingCard.querySelector('.state-dot');
                     var descEl = existingCard.querySelector('.state-desc');
                     
-                    labelEl.style.color = stateConfig.color;
-                    labelEl.innerHTML = '<span class="state-dot" style="background:' + stateConfig.color + '"></span>' + stateConfig.label;
-                    descEl.textContent = instance.state_config ? instance.state_config.description : '';
+                    updateStateLabel(labelEl, stateConfig);
+                    descEl.textContent = safeText(instance.state_config ? instance.state_config.description : '', 80);
                     
                     // 更新渲染器状态
-                    if (renderers[instance.id]) {
-                        renderers[instance.id].setState(instance.state);
+                    if (renderers[safeId]) {
+                        renderers[safeId].setState(state);
                     }
                 } else {
                     // 创建新卡片
                     var card = createInstanceCard(instance);
+                    if (!card) return;
                     instancesGrid.appendChild(card);
                     
                     // 创建渲染器
-                    var canvas = document.getElementById('canvas-' + instance.id);
-                    renderers[instance.id] = new HaloRenderer(canvas, 140);
-                    renderers[instance.id].setState(instance.state);
+                    var canvas = document.getElementById('canvas-' + safeId);
+                    renderers[safeId] = new HaloRenderer(canvas, 140);
+                    renderers[safeId].setState(state);
                 }
             });
         }

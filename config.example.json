@@ -2,21 +2,12 @@
   "instances": [
     {
       "id": "default",
-      "name": "Default Agent",
-      "description": "默认 Hermes 代理节点",
+      "name": "Default",
+      "description": "默认 Hermes 实例",
       "log_path": "~/.hermes/logs/agent.log",
       "db_path": "~/.hermes/state.db",
       "color": "#3399ff",
       "icon": "🤖"
-    },
-    {
-      "id": "servant",
-      "name": "Servant Agent",
-      "description": "仆人代理节点",
-      "log_path": "~/.hermes/profiles/servant/logs/agent.log",
-      "db_path": "~/.hermes/profiles/servant/state.db",
-      "color": "#ff8830",
-      "icon": "👨‍💼"
     }
   ]
 }

@@ -1,0 +1,14 @@
+[Unit]
+Description=Hermes Halo Dashboard - Hermes Agent Multi-Instance Monitor
+Documentation=https://github.com/NousResearch/hermes-halo
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/hermes-halo/scripts/halo_server.py --port 8765
+WorkingDirectory=%h/hermes-halo/scripts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

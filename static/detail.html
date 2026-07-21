@@ -389,9 +389,37 @@
     (function(){
         "use strict";
         
+        function safeText(value, maxLen) {
+            if (value == null) return '';
+            var s = String(value).replace(/[\u0000-\u001f\u007f]/g, '');
+            if (maxLen && s.length > maxLen) s = s.slice(0, maxLen);
+            return s;
+        }
+        
+        function safeInstanceId(value) {
+            var s = String(value || '');
+            return /^[a-zA-Z0-9_-]{1,64}$/.test(s) ? s : 'default';
+        }
+        
+        function safeState(value) {
+            var s = String(value || '');
+            return CONFIGS[s] ? s : 'idle';
+        }
+        
+        function safeColor(value, fallback) {
+            var s = String(value || '');
+            return /^#[0-9a-fA-F]{6}$/.test(s) ? s : (fallback || '#aaaaaa');
+        }
+        
+        function safeIcon(value) {
+            var allowed = {'🤖': true, '👨‍💼': true, '👨💼': true, '🔬': true, '👤': true, '👔': true};
+            var s = String(value || '');
+            return allowed[s] ? s : '●';
+        }
+        
         // 获取节点 ID
         var urlParams = new URLSearchParams(window.location.search);
-        var instanceId = urlParams.get('id') || 'default';
+        var instanceId = safeInstanceId(urlParams.get('id') || 'default');
         
         // ═══════════════════════════════════════════════════════════════
         // 状态配置 - 与 Claude Halo 完全一致
@@ -598,12 +626,12 @@
         // 创建渲染器 — 已在上方直接初始化
         
         function setState(name) {
-            if(!CONFIGS[name]) return;
+            name = safeState(name);
             renderer.setState(name);
-            stateLabelEl.textContent = CONFIGS[name].label;
-            stateLabelEl.style.color = CONFIGS[name].color;
+            stateLabelEl.textContent = safeText(CONFIGS[name].label, 20);
+            stateLabelEl.style.color = safeColor(CONFIGS[name].color, '#aaaaaa');
             stateLabelEl.style.opacity = '1';
-            stateDescEl.textContent = CONFIGS[name].desc;
+            stateDescEl.textContent = safeText(CONFIGS[name].desc, 80);
             stateDescEl.style.opacity = '1';
         }
         
@@ -620,18 +648,37 @@
         };
         
         function updateHistory(history) {
-            if (!history || history.length === 0) { 
-                historyList.innerHTML = '<div class="history-item" style="color:rgba(255,255,255,0.3)">暂无记录</div>'; 
+            historyList.textContent = '';
+            if (!Array.isArray(history) || history.length === 0) { 
+                var empty = document.createElement("div");
+                empty.className = "history-item";
+                empty.style.color = "rgba(255,255,255,0.3)";
+                empty.textContent = "暂无记录";
+                historyList.appendChild(empty);
                 return; 
             }
-            historyList.innerHTML = "";
             history.slice().reverse().forEach(function(item) {
-                var cfg = CONFIGS[item.state] || CONFIGS.idle;
-                var t = new Date(item.timestamp);
-                var ts = t.toLocaleTimeString("zh-CN", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+                var state = safeState(item && item.state);
+                var cfg = CONFIGS[state] || CONFIGS.idle;
+                var t = new Date(item && item.timestamp);
+                var ts = isNaN(t.getTime()) ? "--:--:--" : t.toLocaleTimeString("zh-CN", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
                 var div = document.createElement("div");
                 div.className = "history-item";
-                div.innerHTML = '<div class="history-dot" style="background:'+cfg.color+'"></div><span>'+cfg.label+'</span><span class="history-time">'+ts+'</span>';
+                
+                var dot = document.createElement("div");
+                dot.className = "history-dot";
+                dot.style.background = safeColor(cfg.color, "#aaaaaa");
+                div.appendChild(dot);
+                
+                var label = document.createElement("span");
+                label.textContent = safeText(cfg.label, 20);
+                div.appendChild(label);
+                
+                var time = document.createElement("span");
+                time.className = "history-time";
+                time.textContent = ts;
+                div.appendChild(time);
+                
                 historyList.appendChild(div);
             });
         }
@@ -730,20 +777,22 @@
                     instance = data.data.find(function(i) { return i.id === instanceId; });
                 }
                 if (instance) {
+                    var state = safeState(instance.state);
                     var wrap = document.getElementById('canvasWrap');
                     if (wrap && wrap.classList.contains('loading')) {
                         // 首次数据：用 startRender 直接进入真实状态的入场动画
                         wrap.classList.remove('loading');
-                        renderer.startRender(instance.state);
+                        renderer.startRender(state);
+                        setState(state);
                     } else {
                         // 后续更新：正常 morph
-                        setState(instance.state);
+                        setState(state);
                     }
                     updateHistory(instance.history);
-                    navTitle.textContent = instance.name;
-                    instanceName.textContent = instance.name;
-                    instanceDesc.textContent = instance.description;
-                    instanceIcon.textContent = instance.icon;
+                    navTitle.textContent = safeText(instance.name, 40);
+                    instanceName.textContent = safeText(instance.name, 40);
+                    instanceDesc.textContent = safeText(instance.description, 80);
+                    instanceIcon.textContent = safeIcon(instance.icon);
                 }
             };
             

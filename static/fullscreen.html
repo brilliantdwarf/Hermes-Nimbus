@@ -171,9 +171,37 @@
     (function(){
         "use strict";
         
+        function safeText(value, maxLen) {
+            if (value == null) return '';
+            var s = String(value).replace(/[\u0000-\u001f\u007f]/g, '');
+            if (maxLen && s.length > maxLen) s = s.slice(0, maxLen);
+            return s;
+        }
+        
+        function safeInstanceId(value) {
+            var s = String(value || '');
+            return /^[a-zA-Z0-9_-]{1,64}$/.test(s) ? s : 'default';
+        }
+        
+        function safeState(value) {
+            var s = String(value || '');
+            return CONFIGS[s] ? s : 'idle';
+        }
+        
+        function safeColor(value, fallback) {
+            var s = String(value || '');
+            return /^#[0-9a-fA-F]{6}$/.test(s) ? s : (fallback || '#aaaaaa');
+        }
+        
+        function safeIcon(value) {
+            var allowed = {'🤖': true, '👨‍💼': true, '👨💼': true, '🔬': true, '👤': true, '👔': true};
+            var s = String(value || '');
+            return allowed[s] ? s : '●';
+        }
+        
         var urlParams = new URLSearchParams(window.location.search);
-        var instanceId = urlParams.get('id') || 'default';
-        var detailPage = 'detail.html?id=' + instanceId;
+        var instanceId = safeInstanceId(urlParams.get('id') || 'default');
+        var detailPage = 'detail.html?id=' + encodeURIComponent(instanceId);
         
         // ═══════════════════════════════════════════════════════════════
         // 浏览器全屏 API
@@ -535,11 +563,11 @@
         updateTime();
         
         function setState(name) {
-            if(!CONFIGS[name]) return;
+            name = safeState(name);
             renderer.setState(name);
-            stateLabelEl.textContent = CONFIGS[name].label;
-            stateLabelEl.style.color = CONFIGS[name].color;
-            stateDescEl.textContent = CONFIGS[name].desc;
+            stateLabelEl.textContent = safeText(CONFIGS[name].label, 20);
+            stateLabelEl.style.color = safeColor(CONFIGS[name].color, '#aaaaaa');
+            stateDescEl.textContent = safeText(CONFIGS[name].desc, 80);
         }
         
         // ═══════════════════════════════════════════════════════════════
@@ -571,10 +599,11 @@
                 }
                 
                 if (instance) {
-                    setState(instance.state);
-                    instanceIcon.textContent = instance.icon;
-                    instanceName.textContent = instance.name;
-                    document.title = instance.name + " - " + CONFIGS[instance.state].label;
+                    var state = safeState(instance.state);
+                    setState(state);
+                    instanceIcon.textContent = safeIcon(instance.icon);
+                    instanceName.textContent = safeText(instance.name, 40);
+                    document.title = safeText(instance.name, 40) + " - " + safeText(CONFIGS[state].label, 20);
                 }
             };
             
