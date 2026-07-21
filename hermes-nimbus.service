@@ -1,0 +1,14 @@
+[Unit]
+Description=Hermes Nimbus - Hermes Agent Multi-Instance Status Monitor
+Documentation=https://github.com/NousResearch/hermes-nimbus
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/hermes-nimbus/scripts/halo_server.py --port 8765
+WorkingDirectory=%h/hermes-nimbus/scripts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

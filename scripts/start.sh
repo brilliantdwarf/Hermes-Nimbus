@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hermes Halo 启动脚本（HTTP + WebSocket 同端口）
+# Hermes Nimbus 启动脚本（HTTP + WebSocket 同端口）
 # 支持自动发现 Hermes Profile，无需手动配置
 
 set -euo pipefail
@@ -9,14 +9,14 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PID_FILE="$PROJECT_DIR/.pids"
 LOG_DIR="$PROJECT_DIR/logs"
 LOG_FILE="$LOG_DIR/halo_server.log"
-CONFIG_PATH="${HERMES_HALO_CONFIG:-$HOME/.hermes/hermes-halo/config.json}"
+CONFIG_PATH="${HERMES_NIMBUS_CONFIG:-$HOME/.hermes/hermes-nimbus/config.json}"
 PYTHON="${HERMES_HALO_PYTHON:-$(command -v python3)}"
 PORT="${1:-8765}"
 HOST="${2:-0.0.0.0}"
 
 mkdir -p "$LOG_DIR"
 
-echo "🚀 启动 Hermes Halo..."
+echo "🚀 启动 Hermes Nimbus..."
 echo "   地址: http://$HOST:$PORT"
 echo "   配置: $CONFIG_PATH"
 echo ""
@@ -75,7 +75,7 @@ for i in $(seq 1 20); do
   fi
   if curl -fsS "http://127.0.0.1:$PORT/api/health" >/dev/null 2>&1; then
     echo ""
-    echo "✅ Hermes Halo 已启动!"
+    echo "✅ Hermes Nimbus 已启动!"
     echo "   PID: $PID"
     echo "   页面: http://127.0.0.1:$PORT"
     echo "   健康检查: http://127.0.0.1:$PORT/api/health"

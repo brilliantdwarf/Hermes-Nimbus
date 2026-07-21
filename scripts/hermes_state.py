@@ -46,7 +46,7 @@ def expand_user_path(path: str | os.PathLike) -> Path:
     return Path(text).expanduser()
 
 
-DEFAULT_CONFIG_PATH = real_user_home() / '.hermes' / 'hermes-halo' / 'config.json'
+DEFAULT_CONFIG_PATH = real_user_home() / '.hermes' / 'hermes-nimbus' / 'config.json'
 
 # 自动发现时使用的默认配色方案（按索引循环）
 DEFAULT_PROFILE_COLORS = [

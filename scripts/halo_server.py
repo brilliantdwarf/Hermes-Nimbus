@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Hermes Halo 服务器 - 支持多实例，同端口 HTTP + WebSocket"""
+"""Hermes Nimbus 服务器 - 支持多实例，同端口 HTTP + WebSocket"""
 """
-Hermes Halo — 实时显示多个 Hermes Agent 运行状态的光环指示器仪表盘。
+Hermes Nimbus — 实时显示多个 Hermes Agent 运行状态的光环指示器仪表盘。
 支持自动发现 Hermes Profile，基于日志 + state.db 双源实时状态检测。
 
-仓库: https://github.com/NousResearch/hermes-halo
+仓库: https://github.com/NousResearch/hermes-nimbus
 """
 
 import asyncio
@@ -38,7 +38,7 @@ logger = logging.getLogger('HermesHalo')
 
 
 class HaloServer:
-    """Hermes Halo 服务器（HTTP + WebSocket 同端口）"""
+    """Hermes Nimbus 服务器（HTTP + WebSocket 同端口）"""
 
     def __init__(self, host: str = '0.0.0.0', port: int = 8765, config_path: str = None):
         self.host = host
@@ -65,7 +65,7 @@ class HaloServer:
         """健康检查"""
         return web.json_response({
             'ok': True,
-            'service': 'hermes-halo',
+            'service': 'hermes-nimbus',
             'port': self.port,
             'config_path': str(self.detector.config_path),
             'instances': self.detector.get_instance_ids(),
@@ -207,7 +207,7 @@ class HaloServer:
     async def start(self):
         """启动服务器"""
         self.running = True
-        logger.info(f"🚀 Hermes Halo 服务器已启动: http://{self.host}:{self.port}")
+        logger.info(f"🚀 Hermes Nimbus 服务器已启动: http://{self.host}:{self.port}")
         logger.info(f"📄 配置文件: {self.detector.config_path}")
         logger.info(f"📋 监控实例: {', '.join(self.detector.get_instance_ids())}")
 
@@ -244,14 +244,14 @@ class HaloServer:
             except Exception:
                 pass
         self.clients.clear()
-        logger.info("Hermes Halo 服务器已停止")
+        logger.info("Hermes Nimbus 服务器已停止")
 
 
 def main():
     """主函数"""
     import argparse
 
-    parser = argparse.ArgumentParser(description='Hermes Halo 服务器')
+    parser = argparse.ArgumentParser(description='Hermes Nimbus 服务器')
     parser.add_argument('--host', default='0.0.0.0', help='监听地址 (默认: 0.0.0.0)')
     parser.add_argument('--port', type=int, default=8765, help='监听端口 (默认: 8765)')
     parser.add_argument('--config', default=str(DEFAULT_CONFIG_PATH), help='配置文件路径')

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hermes Halo 停止脚本
+# Hermes Nimbus 停止脚本
 
 set -u
 
@@ -7,7 +7,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PID_FILE="$PROJECT_DIR/.pids"
 
-echo "🛑 停止 Hermes Halo..."
+echo "🛑 停止 Hermes Nimbus..."
 
 stopped=0
 
@@ -57,7 +57,7 @@ if [ -n "$OLD_HTTP" ]; then
 fi
 
 if [ "$stopped" -eq 1 ]; then
-  echo "✅ Hermes Halo 已停止"
+  echo "✅ Hermes Nimbus 已停止"
 else
-  echo "ℹ️  未发现运行中的 Hermes Halo 进程"
+  echo "ℹ️  未发现运行中的 Hermes Nimbus 进程"
 fi

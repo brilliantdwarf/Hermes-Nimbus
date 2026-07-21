@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hermes Halo 状态检查脚本
+# Hermes Nimbus 状态检查脚本
 
 set -u
 
@@ -15,7 +15,7 @@ if [ -f "$PID_FILE" ]; then
   PORT="${PORT:-8765}"
 fi
 
-echo "📊 Hermes Halo 状态检查"
+echo "📊 Hermes Nimbus 状态检查"
 echo "========================"
 echo ""
 
@@ -46,12 +46,12 @@ fi
 
 echo ""
 echo "🩺 健康检查:"
-if curl -fsS "http://$HOST:$PORT/api/health" >/tmp/hermes-halo-health.json 2>/dev/null; then
+if curl -fsS "http://$HOST:$PORT/api/health" >/tmp/hermes-nimbus-health.json 2>/dev/null; then
   echo "   ✅ http://$HOST:$PORT/api/health"
   if command -v jq >/dev/null 2>&1; then
-    jq . /tmp/hermes-halo-health.json | sed 's/^/   /'
+    jq . /tmp/hermes-nimbus-health.json | sed 's/^/   /'
   else
-    cat /tmp/hermes-halo-health.json | sed 's/^/   /'
+    cat /tmp/hermes-nimbus-health.json | sed 's/^/   /'
     echo ""
   fi
 else
