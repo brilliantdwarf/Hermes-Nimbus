@@ -5,9 +5,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<div align="center">
-  <img src="static/halo-states.svg" alt="Hermes Nimbus 状态光环示意" width="100%">
-</div>
+<p align="center">
+  <img src="static/halo-states.svg" alt="Hermes Nimbus 状态光环示意" width="680" max-width="100%">
+</p>
 
 ---
 

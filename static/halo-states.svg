@@ -1,80 +1,80 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 240" width="800" height="240">
-  <rect width="800" height="240" rx="16" fill="#1a1a2e"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" width="800" height="340">
+  <rect width="800" height="340" rx="16" fill="#1a1a2e"/>
   <text x="400" y="36" text-anchor="middle" fill="#ccc" font-family="sans-serif" font-size="18" font-weight="bold">Hermes Nimbus — 状态光环示意 / Status Halo Legend</text>
 
+  <!-- ========== Row 1 ========== -->
+
   <!-- Idle -->
-  <g transform="translate(50, 80)">
+  <g transform="translate(60, 80)">
     <circle cx="40" cy="40" r="30" fill="none" stroke="#aaaaaa" stroke-width="4" stroke-dasharray="60,30" opacity="0.6"/>
     <circle cx="40" cy="40" r="20" fill="#aaaaaa" opacity="0.15"/>
     <circle cx="40" cy="40" r="6" fill="#aaaaaa"/>
-    <text x="40" y="100" text-anchor="middle" fill="#aaaaaa" font-family="sans-serif" font-size="13">空闲</text>
-    <text x="40" y="116" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="11">Idle</text>
+    <text x="40" y="100" text-anchor="middle" fill="#aaaaaa" font-family="sans-serif" font-size="14">空闲</text>
+    <text x="40" y="118" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="12">Idle</text>
   </g>
 
   <!-- Thinking -->
-  <g transform="translate(180, 80)">
+  <g transform="translate(260, 80)">
     <circle cx="40" cy="40" r="30" fill="none" stroke="#ff8830" stroke-width="5" stroke-dasharray="70,35,45,30,25,20" opacity="0.9"/>
     <circle cx="40" cy="40" r="20" fill="#ff8830" opacity="0.2"/>
     <circle cx="40" cy="40" r="6" fill="#ff8830"/>
-    <text x="40" y="100" text-anchor="middle" fill="#ff8830" font-family="sans-serif" font-size="13">思考中</text>
-    <text x="40" y="116" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="11">Thinking</text>
+    <text x="40" y="100" text-anchor="middle" fill="#ff8830" font-family="sans-serif" font-size="14">思考中</text>
+    <text x="40" y="118" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="12">Thinking</text>
   </g>
 
   <!-- Streaming -->
-  <g transform="translate(310, 80)">
+  <g transform="translate(460, 80)">
     <circle cx="40" cy="40" r="30" fill="none" stroke="#e8b100" stroke-width="5" stroke-dasharray="60,25,45,20,35,15" opacity="0.9"/>
     <circle cx="40" cy="40" r="20" fill="#e8b100" opacity="0.2"/>
     <circle cx="40" cy="40" r="6" fill="#e8b100"/>
-    <text x="40" y="100" text-anchor="middle" fill="#e8b100" font-family="sans-serif" font-size="13">输出中</text>
-    <text x="40" y="116" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="11">Streaming</text>
+    <text x="40" y="100" text-anchor="middle" fill="#e8b100" font-family="sans-serif" font-size="14">输出中</text>
+    <text x="40" y="118" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="12">Streaming</text>
   </g>
 
   <!-- Executing -->
-  <g transform="translate(440, 80)">
+  <g transform="translate(660, 80)">
     <circle cx="40" cy="40" r="30" fill="none" stroke="#3399ff" stroke-width="5" stroke-dasharray="50,25,20,20,35,25,25,22" opacity="0.9"/>
     <circle cx="40" cy="40" r="20" fill="#3399ff" opacity="0.2"/>
     <circle cx="40" cy="40" r="6" fill="#3399ff"/>
-    <text x="40" y="100" text-anchor="middle" fill="#3399ff" font-family="sans-serif" font-size="13">执行中</text>
-    <text x="40" y="116" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="11">Executing</text>
+    <text x="40" y="100" text-anchor="middle" fill="#3399ff" font-family="sans-serif" font-size="14">执行中</text>
+    <text x="40" y="118" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="12">Executing</text>
   </g>
 
+  <!-- ========== Row 2 ========== -->
+
   <!-- Completed -->
-  <g transform="translate(570, 80)">
+  <g transform="translate(60, 220)">
     <circle cx="40" cy="40" r="30" fill="none" stroke="#33cc55" stroke-width="4" stroke-dasharray="70,35,45,30,25,20" opacity="0.8"/>
     <circle cx="40" cy="40" r="20" fill="#33cc55" opacity="0.15"/>
     <circle cx="40" cy="40" r="6" fill="#33cc55"/>
-    <text x="40" y="100" text-anchor="middle" fill="#33cc55" font-family="sans-serif" font-size="13">已完成</text>
-    <text x="40" y="116" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="11">Completed</text>
+    <text x="40" y="100" text-anchor="middle" fill="#33cc55" font-family="sans-serif" font-size="14">已完成</text>
+    <text x="40" y="118" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="12">Completed</text>
   </g>
 
   <!-- Error -->
-  <g transform="translate(700, 80)">
+  <g transform="translate(260, 220)">
     <circle cx="40" cy="40" r="30" fill="none" stroke="#ff4444" stroke-width="3" stroke-dasharray="40,20,30,15" opacity="0.8"/>
     <circle cx="40" cy="40" r="20" fill="#ff4444" opacity="0.15"/>
     <circle cx="40" cy="40" r="6" fill="#ff4444"/>
-    <text x="40" y="100" text-anchor="middle" fill="#ff4444" font-family="sans-serif" font-size="13">错误</text>
-    <text x="40" y="116" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="11">Error</text>
+    <text x="40" y="100" text-anchor="middle" fill="#ff4444" font-family="sans-serif" font-size="14">错误</text>
+    <text x="40" y="118" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="12">Error</text>
   </g>
 
-  <!-- Bottom row: remaining states -->
   <!-- Input Needed -->
-  <g transform="translate(160, 180)">
+  <g transform="translate(460, 220)">
     <circle cx="40" cy="40" r="30" fill="none" stroke="#ee3333" stroke-width="4" stroke-dasharray="80,50,30,25" opacity="0.8"/>
     <circle cx="40" cy="40" r="20" fill="#ee3333" opacity="0.15"/>
     <circle cx="40" cy="40" r="6" fill="#ee3333"/>
-    <text x="40" y="100" text-anchor="middle" fill="#ee3333" font-family="sans-serif" font-size="13">等待输入</text>
-    <text x="40" y="116" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="11">Input Needed</text>
+    <text x="40" y="100" text-anchor="middle" fill="#ee3333" font-family="sans-serif" font-size="14">等待输入</text>
+    <text x="40" y="118" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="12">Input Needed</text>
   </g>
 
   <!-- Compacting -->
-  <g transform="translate(380, 180)">
+  <g transform="translate(660, 220)">
     <circle cx="40" cy="40" r="30" fill="none" stroke="#9944ff" stroke-width="4" stroke-dasharray="35,20,35,20,35,20" opacity="0.8"/>
     <circle cx="40" cy="40" r="20" fill="#9944ff" opacity="0.15"/>
     <circle cx="40" cy="40" r="6" fill="#9944ff"/>
-    <text x="40" y="100" text-anchor="middle" fill="#9944ff" font-family="sans-serif" font-size="13">压缩中</text>
-    <text x="40" y="116" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="11">Compacting</text>
+    <text x="40" y="100" text-anchor="middle" fill="#9944ff" font-family="sans-serif" font-size="14">压缩中</text>
+    <text x="40" y="118" text-anchor="middle" fill="#888" font-family="sans-serif" font-size="12">Compacting</text>
   </g>
-
-  <!-- Separator line -->
-  <line x1="20" y1="145" x2="780" y2="145" stroke="#333" stroke-width="1" stroke-dasharray="4,4" opacity="0.5"/>
 </svg>
