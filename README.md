@@ -1,249 +1,249 @@
 # Hermes Nimbus
 
 > **Nimbus** — 神祇身后的灵光晕轮，实时映照 Hermes Agent 的每一次脉动。
-> **Nimbus** — The luminous halo behind the divine, reflecting every pulse of your Hermes Agents in real time.
+> **Nimbus** — A real-time status halo for every Hermes Agent profile.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB.svg)](https://www.python.org/)
 
 <p align="center">
-  <img src="static/halo-states.svg" alt="Hermes Nimbus 状态光环示意" width="680" max-width="100%">
+  <img src="static/halo-states.svg" alt="Hermes Nimbus status halo legend" width="680">
 </p>
 
----
+Hermes Nimbus 是一个轻量级的多 Profile 状态仪表盘。它优先接收 Hermes 官方插件
+Hook 产生的生命周期事件，并用日志、`state.db` 和进程存活信息作为兼容与恢复来源。
+页面通过 HTTP 与 WebSocket 实时更新，不会读取或上传对话正文、工具参数或工具结果。
 
-## 📖 中文
+## 功能
 
-**Hermes Nimbus** 是一款实时显示多个 [Hermes Agent](https://github.com/NousResearch/hermes-agent) 运行状态的光环指示器仪表盘。它通过监控每个 Agent 实例的日志和状态数据库，以流畅的 Canvas 动画光环直观展示每个个体的当前状态。
+- 同时监控默认 Hermes 实例和 `~/.hermes/profiles/` 下的多个 Profile
+- 显示空闲、思考、输出、执行工具、等待输入、完成、错误和上下文压缩状态
+- 事件优先的确定性状态机，支持并行工具、乱序事件和重复事件去重
+- Hermes Hook 投递失败重试、30 秒活动心跳、退出前有界队列刷新
+- 日志与数据库回退；不再用不可靠的 CPU 占用推断个体活动
+- 默认仅监听 `127.0.0.1`，局域网监听必须配置客户端 IP/CIDR 白名单
+- WebSocket 协议只读，并校验浏览器 Origin
+- Canvas 动画首页、详情页和全屏展示，保持原有显示样式
 
-### ✨ 功能特性
+## 状态说明
 
-- 🎨 **多实例监控** — 同时监控多个 Hermes 个体（Profile）
-- 🔄 **实时更新** — 基于日志 + state.db 双源检测，500ms 刷新
-- 🤖 **自动发现** — 启动时自动扫描 `~/.hermes/profiles/`，无需手动配置
-- ✨ **流畅动画** — Canvas 绘制不规则圆环光环动画，8 种状态各有独特动效
-- 📊 **首页概览** — 一眼查看所有个体状态
-- 🔍 **实例详情** — 点击任意实例查看详细状态历史
-- 🖥️ **全屏模式** — 支持全屏展示，适合大屏监控
-- 📱 **响应式设计** — 完美适配桌面和移动设备
-- 🩺 **健康检查** — HTTP API + WebSocket 实时推送
+| 状态 | 颜色 | 含义 |
+| --- | --- | --- |
+| 空闲 | 灰白 `#aaaaaa` | 等待任务 |
+| 思考中 | 琥珀 `#ff8830` | 正在处理请求 |
+| 输出中 | 金色 `#e8b100` | 正在生成回复 |
+| 执行中 | 蓝色 `#3399ff` | 正在调用工具 |
+| 等待输入 | 红色 `#ee3333` | 等待澄清或审批 |
+| 已完成 | 绿色 `#33cc55` | 最近一轮成功结束 |
+| 错误 | 红色 `#ff4444` | 最近一轮失败 |
+| 压缩中 | 紫色 `#9944ff` | 正在整理上下文 |
 
-### 🎯 状态说明
+## 快速开始
 
-| 状态 | 颜色 | 说明 |
-|------|------|------|
-| ⚪ 空闲 | 灰白 `#aaaaaa` | 正在等待任务 |
-| 🟠 思考中 | 琥珀 `#ff8830` | 正在处理请求 |
-| 💛 输出中 | 金色 `#e8b100` | 正在生成回复 |
-| 🔵 执行中 | 蓝色 `#3399ff` | 正在调用工具 |
-| 🔴 等待输入 | 红色 `#ee3333` | 需要用户确认 |
-| 🟢 已完成 | 绿色 `#33cc55` | 任务已完成 |
-| ❌ 错误 | 红色 `#ff4444` | 出现错误 |
-| 🟣 压缩中 | 紫色 `#9944ff` | 正在整理上下文 |
-
-### 🔧 快速开始
-
-**前置条件：** Python 3.10+，aiohttp
+要求 Python 3.10+，并且本机已经安装 Hermes Agent。
 
 ```bash
-pip install aiohttp
-
-# 启动
+git clone https://github.com/brilliantdwarf/Hermes-Nimbus.git hermes-nimbus
 cd hermes-nimbus
-./scripts/start.sh
 
-# 或直接运行
-python3 scripts/halo_server.py --port 8765
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+
+./scripts/start.sh
 ```
 
-**访问地址：**
-
-| 地址 | 说明 |
-|------|------|
-| `http://localhost:8765` | 🏠 首页（多实例概览） |
-| `http://localhost:8765/detail.html` | 🔍 实例详情页 |
-| `http://localhost:8765/fullscreen.html` | 🖥️ 全屏模式 |
-| `http://localhost:8765/api/health` | 🩺 健康检查 API |
-| `ws://localhost:8765/ws` | 🔄 WebSocket 实时推送 |
-
-**Systemd 用户服务（开机自启）：**
+打开 `http://127.0.0.1:8765`。管理命令：
 
 ```bash
-mkdir -p ~/.config/systemd/user/
+./scripts/status.sh
+./scripts/stop.sh
+```
+
+Nimbus 启动时会自动发现默认实例及 `~/.hermes/profiles/` 下的 Profile，并将运行配置写到
+`~/.hermes/hermes-nimbus/config.json`。如需固定显示名称、颜色或图标，可复制并编辑
+[`config.example.json`](config.example.json)。仓库根目录的 `config.json` 已被忽略，避免误传本机配置。
+
+## 安全的局域网访问
+
+默认启动只监听 loopback。若 Nimbus 所在机器的局域网地址为 `192.168.1.10`，只允许
+客户端 `192.168.1.20` 访问，可运行：
+
+```bash
+./scripts/start.sh 8765 127.0.0.1 192.168.1.10 192.168.1.20
+```
+
+也可以直接运行：
+
+```bash
+python3 scripts/halo_server.py \
+  --host 127.0.0.1 \
+  --lan-host 192.168.1.10 \
+  --allow-client 192.168.1.20 \
+  --port 8765
+```
+
+`--allow-client` 支持单个 IP 或 CIDR，并可重复指定。白名单使用 TCP 来源地址，不信任
+`X-Forwarded-For`。远程浏览器还必须发送与 Nimbus 页面地址一致的 WebSocket Origin。
+这是应用层访问控制，不替代主机防火墙或 TLS；请仅在可信局域网中直接暴露 HTTP 服务。
+
+## 安装 Hermes Hook 插件
+
+只使用日志和数据库时 Nimbus 仍能工作，但不能可靠获得工具开始、并行工具数量、等待审批
+等完整生命周期。建议为每个需要监控的 Hermes Profile 安装插件。
+
+默认 Profile：
+
+```bash
+mkdir -p ~/.hermes/plugins/hermes-nimbus
+cp integrations/hermes-nimbus/plugin.yaml integrations/hermes-nimbus/__init__.py \
+  ~/.hermes/plugins/hermes-nimbus/
+hermes plugins enable hermes-nimbus
+```
+
+命名 Profile：
+
+```bash
+PROFILE=research_assistant
+mkdir -p ~/.hermes/profiles/"$PROFILE"/plugins/hermes-nimbus
+cp integrations/hermes-nimbus/plugin.yaml integrations/hermes-nimbus/__init__.py \
+  ~/.hermes/profiles/"$PROFILE"/plugins/hermes-nimbus/
+hermes -p "$PROFILE" plugins enable hermes-nimbus
+```
+
+重启正在运行的对应 gateway 后插件生效；停止的 gateway 无需启动，下次启动会自动加载。
+命令行交互同样可以显示状态，只要该命令使用的 Profile 已启用插件。插件只发送 Profile、
+Session、Turn、Tool 和 Request 标识及生命周期结果，不发送消息正文、历史、工具参数、结果或错误正文。
+
+投递默认使用 `http://127.0.0.1:8765/api/events`，失败最多尝试 3 次。活动 Session 每
+30 秒续租，Nimbus 在 90 秒未收到事件或心跳时释放遗留活动状态。
+
+## Systemd 用户服务
+
+仓库提供的服务文件默认仅允许本机访问，并使用快速开始中创建的 `.venv`：
+
+```bash
+mkdir -p ~/.config/systemd/user
 cp hermes-nimbus.service ~/.config/systemd/user/
 systemctl --user daemon-reload
 systemctl --user enable --now hermes-nimbus.service
+systemctl --user status hermes-nimbus.service
 ```
 
-**环境变量：**
+服务可从可选的 `~/.config/hermes-nimbus.env` 读取 Token 等环境变量。若需要局域网监听，
+请在复制后的服务文件中为 `ExecStart` 增加 `--lan-host` 与至少一个 `--allow-client`，然后
+执行 `systemctl --user daemon-reload` 和 `systemctl --user restart hermes-nimbus.service`。
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `HERMES_NIMBUS_CONFIG` | 配置文件路径 | `~/.hermes/hermes-nimbus/config.json` |
-| `HERMES_HALO_PYTHON` | Python 解释器路径 | `python3` |
+## 环境变量
 
-### 🤖 自动发现机制
+| 变量 | 默认值 | 用途 |
+| --- | --- | --- |
+| `HERMES_NIMBUS_CONFIG` | `~/.hermes/hermes-nimbus/config.json` | Nimbus 配置文件 |
+| `HERMES_NIMBUS_HOME` | 当前登录用户 Home | 显式指定 Hermes 数据所属 Home |
+| `HERMES_NIMBUS_PYTHON` | `python3` | `start.sh` 使用的解释器 |
+| `HERMES_NIMBUS_EVENT_URL` | `http://127.0.0.1:8765/api/events` | 插件事件入口 |
+| `HERMES_NIMBUS_EVENT_TOKEN` | 空 | 事件入口与插件共用的 Bearer Token |
 
-从 v2 开始，Hermes Nimbus 支持自动发现 Hermes Profile。启动时会自动扫描：
+旧的 `HERMES_HALO_*` 变量仍作为兼容别名，但新部署应使用 `HERMES_NIMBUS_*`。
+未设置事件 Token 时，`POST /api/events` 只接受 loopback 请求。若通过反向代理暴露事件入口，
+必须配置高强度 Token，并在代理层同时启用 TLS 和访问控制。
 
+## API 与 WebSocket
+
+| 地址 | 用途 |
+| --- | --- |
+| `GET /api/health` | 服务健康、实例和连接数 |
+| `GET /api/states` | 所有实例状态快照 |
+| `POST /api/events` | Hermes 生命周期事件入口 |
+| `GET /ws` | WebSocket 状态推送 |
+
+客户端可发送的 WebSocket 消息只有：
+
+- `get_states`
+- `get_state {instance_id}`
+- `ping`
+
+服务端会发送 `states_update`、`state_update`、`pong` 或 `error`。协议不提供远程手动状态修改。
+
+## 状态判断顺序
+
+1. Hermes Hook、TUI gateway 或 Runs API 的规范化生命周期事件。
+2. Hermes 日志增量，用于旧版本兼容和事件生产者重启后的恢复。
+3. `state.db` 最近完成快照。
+4. 进程仅用于判断实例是否在线，不使用 CPU 占用猜测活动状态。
+
+规范化事件支持 `turn.*`、`model.*`、`tool.*`、`input.*`、`compression.*` 和 `heartbeat`。
+状态机按 Profile 与 Session 隔离，能够处理并行工具、重复事件及部分乱序终止事件。
+
+## 测试
+
+```bash
+python scripts/test.py
 ```
-~/.hermes/profiles/*/logs/agent.log
-~/.hermes/profiles/*/state.db
-```
 
-扫描到有效 Profile 后自动写入配置文件并注册到仪表盘。如果你需要自定义配置，也可以手动编辑：
+测试覆盖状态机、日志/数据库检测、Hook 隐私边界、投递重试、心跳租约、HTTP/WebSocket
+访问控制和静态页面 XSS 回归检查。
 
-**配置文件路径：** `~/.hermes/hermes-nimbus/config.json`
+## 项目结构
 
-```json
-{
-  "instances": [
-    {
-      "id": "my-agent",
-      "name": "我的 Agent",
-      "description": "自定义描述",
-      "log_path": "~/.hermes/logs/agent.log",
-      "db_path": "~/.hermes/state.db",
-      "color": "#3399ff",
-      "icon": "🤖"
-    }
-  ]
-}
-```
-
-### 🔬 检测原理
-
-三级检测确保状态判定的准确性：
-
-1. **📝 日志实时监控** — 监听 `agent.log` 新增行，识别关键词（`OpenAI client created`、`tool_executor`、`Turn ended` 等）
-2. **🗄️ 数据库查询** — 读取 `state.db` 中最新会话的消息角色和时间戳
-3. **⚙️ 进程 CPU 检测** — 回退方案，通过 `ps` 检测对应进程的 CPU 使用率
-
-### 📁 项目结构
-
-```
+```text
 hermes-nimbus/
-├── README.md                     # 本文件
-├── LICENSE                       # MIT License
-├── config.example.json           # 配置文件示例
-├── .gitignore
-├── hermes-nimbus.service         # systemd 用户服务单元
-├── requirements.txt              # Python 依赖
+├── integrations/hermes-nimbus/  # Hermes 官方 Hook 适配插件
 ├── scripts/
-│   ├── halo_server.py            # HTTP + WebSocket 同端口服务器
-│   ├── hermes_state.py           # 多实例状态检测器（含自动发现）
-│   └── start.sh / stop.sh / status.sh
-├── static/
-│   ├── index.html                # 首页（多实例概览）
-│   ├── detail.html               # 实例详情页
-│   ├── fullscreen.html           # 全屏展示
-│   ├── halo-states.svg           # 状态示意图
-│   └── favicon.svg               # 网站图标
+│   ├── halo_server.py            # HTTP、WebSocket 与事件入口
+│   ├── hermes_state.py           # 多 Profile 检测与自动发现
+│   ├── state_model.py            # 确定性事件状态机
+│   └── test.py                   # 回归测试入口
+├── static/                       # 原生 HTML/Canvas 界面
+├── tests/                        # 单元和协议测试
+├── config.example.json
+├── hermes-nimbus.service
+└── requirements.txt
 ```
 
-### 🛠️ 管理命令
+## English
+
+Hermes Nimbus is a real-time status dashboard for multiple Hermes Agent profiles. It uses
+official Hermes lifecycle hooks as the authoritative source and falls back to incremental logs,
+`state.db`, and process availability for compatibility and recovery.
+
+Key properties:
+
+- deterministic per-session state tracking, including parallel tools and approval waits;
+- privacy-safe event payloads with no conversation text, tool arguments, or tool results;
+- retry, bounded shutdown flush, 30-second heartbeat, and a 90-second server-side lease;
+- loopback-only defaults, explicit LAN client allowlists, read-only WebSocket messages, and
+  browser Origin validation;
+- unchanged Canvas halo visuals for dashboard, detail, and fullscreen views.
+
+Quick start:
 
 ```bash
-cd ~/hermes-nimbus
-
-# 查看所有实例状态
-python3 scripts/hermes_state.py --list
-
-# 持续监控
-python3 scripts/hermes_state.py --watch
-
-# 调试模式
-python3 scripts/hermes_state.py --debug
-
-# 启动 / 停止 / 状态
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
 ./scripts/start.sh
-./scripts/stop.sh
-./scripts/status.sh
 ```
 
-### 📡 API 接口
-
-**HTTP：**
-- `GET /api/health` — 服务健康与实例列表
-- `GET /api/states` — 全部实例当前状态
-
-**WebSocket 消息：**
-
-| 方向 | 消息类型 | 说明 |
-|------|---------|------|
-| 📤 客户端 → 服务端 | `get_states` | 获取所有实例状态 |
-| | `get_state {instance_id}` | 获取指定实例详情 |
-| | `set_state {instance_id, state}` | 手动设置状态 |
-| | `ping` | 心跳检测 |
-| 📥 服务端 → 客户端 | `states_update` | 全量状态更新（自动推送） |
-| | `state_update` | 单个实例状态更新 |
-| | `pong` | 心跳响应 |
-| | `error` | 错误消息 |
-
-### 🙏 致谢
-
-- [Claude Halo](https://github.com/Houyusu/claude-halo) — 本项目灵感来源，致敬 Claude Halo 的优雅光环动画
-- [Hermes Agent](https://github.com/NousResearch/hermes-agent) — 目标监控应用
-
-### 📄 许可证
-
-MIT License
-
----
-
-## 📖 English
-
-**Hermes Nimbus** is a real-time status halo dashboard for [Hermes Agent](https://github.com/NousResearch/hermes-agent) instances. It monitors each agent's log files and state database, displaying their current status through fluid Canvas-animated glowing halos.
-
-### ✨ Features
-
-- 🎨 **Multi-instance monitoring** — Watch multiple Hermes profiles simultaneously
-- 🔄 **Real-time updates** — Dual-source detection via logs + state.db, 500ms refresh
-- 🤖 **Auto-discovery** — Automatically scans `~/.hermes/profiles/` on startup
-- ✨ **Fluid animations** — Canvas-drawn irregular halos, 8 unique status animations
-- 📊 **Dashboard overview** — See all agent status at a glance
-- 🔍 **Instance details** — Click any instance for detailed status history
-- 🖥️ **Fullscreen mode** — Perfect for wall-mounted monitoring
-- 📱 **Responsive** — Works on desktop and mobile
-- 🩺 **Health check** — HTTP API + WebSocket push
-
-### 🎯 Status Legend
-
-| Status | Color | Description |
-|--------|-------|-------------|
-| ⚪ Idle | Gray `#aaaaaa` | Waiting for tasks |
-| 🟠 Thinking | Amber `#ff8830` | Processing a request |
-| 💛 Streaming | Gold `#e8b100` | Generating response |
-| 🔵 Executing | Blue `#3399ff` | Calling tools |
-| 🔴 Input Needed | Red `#ee3333` | Awaiting user input |
-| 🟢 Completed | Green `#33cc55` | Task finished |
-| ❌ Error | Red `#ff4444` | An error occurred |
-| 🟣 Compacting | Purple `#9944ff` | Compressing context |
-
-### 🔧 Quick Start
+For LAN access, pass the server address and the only allowed client explicitly:
 
 ```bash
-pip install aiohttp
-
-cd hermes-nimbus
-./scripts/start.sh
-# Open http://localhost:8765
+./scripts/start.sh 8765 127.0.0.1 192.168.1.10 192.168.1.20
 ```
 
-### 🤖 Auto-Discovery
+Install `integrations/hermes-nimbus` into each Hermes Profile that should publish authoritative
+events, enable it with `hermes plugins enable hermes-nimbus`, and restart only gateways that are
+already running. CLI sessions are supported as well because status comes from profile hooks, not
+from the gateway process alone.
 
-Since v2.0.0, Hermes Nimbus automatically discovers Hermes profiles by scanning `~/.hermes/profiles/` for valid log files and state databases. No manual configuration needed for standard setups.
+Run the regression suite with `python scripts/test.py`. See the Chinese sections above for the
+complete service, security, API, and plugin setup.
 
-### 🔬 Detection Pipeline
+## Credits
 
-1. **📝 Real-time log monitoring** — Watches `agent.log` for keywords
-2. **🗄️ Database query** — Reads `state.db` session data
-3. **⚙️ Process CPU check** — Falls back to `ps` CPU monitoring
+- [Hermes Agent](https://github.com/NousResearch/hermes-agent)
+- [Claude Halo](https://github.com/Houyusu/claude-halo), the visual inspiration for the halo animation
 
-### 🙏 Credits
+## License
 
-- [Claude Halo](https://github.com/Houyusu/claude-halo) — Inspired by Claude Halo's elegant glow animations
-- [Hermes Agent](https://github.com/NousResearch/hermes-agent) — The target application being monitored
-
-### 📄 License
-
-MIT License
+[MIT](LICENSE)

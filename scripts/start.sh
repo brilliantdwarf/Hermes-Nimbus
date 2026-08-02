@@ -9,15 +9,26 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 PID_FILE="$PROJECT_DIR/.pids"
 LOG_DIR="$PROJECT_DIR/logs"
 LOG_FILE="$LOG_DIR/halo_server.log"
-CONFIG_PATH="${HERMES_NIMBUS_CONFIG:-$HOME/.hermes/hermes-nimbus/config.json}"
-PYTHON="${HERMES_HALO_PYTHON:-$(command -v python3)}"
+CONFIG_PATH="${HERMES_NIMBUS_CONFIG:-${HERMES_HALO_CONFIG:-$HOME/.hermes/hermes-nimbus/config.json}}"
+PYTHON="${HERMES_NIMBUS_PYTHON:-${HERMES_HALO_PYTHON:-$(command -v python3)}}"
 PORT="${1:-8765}"
-HOST="${2:-0.0.0.0}"
+HOST="${2:-127.0.0.1}"
+LAN_HOST="${3:-}"
+ALLOWED_CLIENT="${4:-}"
+
+if { [ -n "$LAN_HOST" ] && [ -z "$ALLOWED_CLIENT" ]; } || \
+   { [ -z "$LAN_HOST" ] && [ -n "$ALLOWED_CLIENT" ]; }; then
+  echo "❌ 局域网监听地址和允许客户端必须同时指定"
+  exit 1
+fi
 
 mkdir -p "$LOG_DIR"
 
 echo "🚀 启动 Hermes Nimbus..."
-echo "   地址: http://$HOST:$PORT"
+echo "   本机地址: http://$HOST:$PORT"
+if [ -n "$LAN_HOST" ]; then
+  echo "   局域网地址: http://$LAN_HOST:$PORT（仅允许 $ALLOWED_CLIENT）"
+fi
 echo "   配置: $CONFIG_PATH"
 echo ""
 
@@ -50,11 +61,15 @@ fi
 
 echo "🔌 启动服务..."
 cd "$SCRIPT_DIR"
-nohup "$PYTHON" halo_server.py \
-  --host "$HOST" \
-  --port "$PORT" \
-  --config "$CONFIG_PATH" \
-  >>"$LOG_FILE" 2>&1 &
+SERVER_ARGS=(
+  --host "$HOST"
+  --port "$PORT"
+  --config "$CONFIG_PATH"
+)
+if [ -n "$LAN_HOST" ]; then
+  SERVER_ARGS+=(--lan-host "$LAN_HOST" --allow-client "$ALLOWED_CLIENT")
+fi
+nohup "$PYTHON" halo_server.py "${SERVER_ARGS[@]}" >>"$LOG_FILE" 2>&1 &
 PID=$!
 
 cat > "$PID_FILE" <<EOF
@@ -78,6 +93,9 @@ for i in $(seq 1 20); do
     echo "✅ Hermes Nimbus 已启动!"
     echo "   PID: $PID"
     echo "   页面: http://127.0.0.1:$PORT"
+    if [ -n "$LAN_HOST" ]; then
+      echo "   局域网: http://$LAN_HOST:$PORT（仅允许 $ALLOWED_CLIENT）"
+    fi
     echo "   健康检查: http://127.0.0.1:$PORT/api/health"
     echo "   WebSocket: ws://127.0.0.1:$PORT/ws"
     echo "   日志: $LOG_FILE"

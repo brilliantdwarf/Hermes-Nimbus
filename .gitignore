@@ -6,6 +6,13 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Logs
 logs/
@@ -14,6 +21,11 @@ logs/
 # Runtime
 .pids
 .env
+.env.*
+/config.json
+*.db
+*.sqlite
+*.sqlite3
 
 # OS
 .DS_Store

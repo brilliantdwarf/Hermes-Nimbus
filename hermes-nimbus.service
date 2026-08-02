@@ -1,14 +1,19 @@
 [Unit]
-Description=Hermes Nimbus - Hermes Agent Multi-Instance Status Monitor
-Documentation=https://github.com/NousResearch/hermes-nimbus
+Description=Hermes Nimbus - Hermes Agent status dashboard
+Documentation=https://github.com/brilliantdwarf/Hermes-Nimbus
 After=network.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=%h/hermes-nimbus/scripts/halo_server.py --port 8765
 WorkingDirectory=%h/hermes-nimbus/scripts
+Environment=PYTHONUNBUFFERED=1
+Environment=HOME=%h
+Environment=HERMES_NIMBUS_HOME=%h
+EnvironmentFile=-%h/.config/hermes-nimbus.env
+ExecStart=%h/hermes-nimbus/.venv/bin/python %h/hermes-nimbus/scripts/halo_server.py --host 127.0.0.1 --port 8765
 Restart=always
-RestartSec=5
+RestartSec=3
 
 [Install]
 WantedBy=default.target
